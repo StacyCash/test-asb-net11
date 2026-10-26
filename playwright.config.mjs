@@ -12,9 +12,8 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
     {
-      command: 'func start --port 7041',
-      cwd: './Api',
-      url: 'http://127.0.0.1:7041/api/Weather',
+      command: 'dotnet run --project Api --no-launch-profile --urls http://127.0.0.1:7041',
+      url: 'http://127.0.0.1:7041/api/health',
       timeout: 120_000,
       reuseExistingServer: !process.env.CI,
     },

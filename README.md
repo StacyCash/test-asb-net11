@@ -1,54 +1,64 @@
-# Static Web Apps .NET 11 test application
+# .NET 10 Blazor client and minimal API for App Service Builder
 
-This solution uses .NET 11 RC3 (prerelease), pinned in `global.json`.
-Install SDK **11.0.100-rc.3.26522.148** and Azure Functions Core Tools **4.16.0**
-or later.
+This solution targets .NET 10, pinned in `global.json` (SDK `10.0.100` or any later
+10.0 feature band). Node.js 22 or later is required for the test tooling.
 
-`test-swa-net11.slnx` contains two independent projects:
+`test-swa-net11.slnx` contains three projects:
 
-- `Client/`: standalone Blazor WebAssembly, using the .NET 11 Components
-  Gateway development server and fingerprinted static assets in `wwwroot/`.
-- `Api/`: Azure Functions v4 isolated worker using `Azure.Functions.Sdk/1.0.1`
-  with ASP.NET Core HTTP integration.
-  Its host configuration remains in `host.json`; do not move it into `wwwroot/`.
+- `Client/`: standalone Blazor WebAssembly with fingerprinted static assets in `wwwroot/`.
+- `Api/`: ASP.NET Core minimal API.
+  - `GET /api/Weather` returns five fixed weather forecasts.
+  - `GET /api/health` returns 200.
+- `Api.Tests/`: xUnit tests that host the API in-process.
 
 ## Build and run
 
 ```sh
 dotnet build test-swa-net11.slnx
-cp Api/local.settings.json.example Api/local.settings.json
 dotnet run --project Client --launch-profile http
 ```
 
 In a second terminal:
 
 ```sh
-cd Api
-func start --port 7041
+dotnet run --project Api --launch-profile http
 ```
 
-The client runs at `http://localhost:5009`; the API is independently accessible at
-`http://localhost:7041/api/Weather` and returns five fixed weather forecasts.
-The client's Weather page intentionally requests `/api/Weather` on its own origin.
-It fails when run outside Azure Static Web Apps because the API proxy is absent.
-No local proxy or CORS workaround is added.
+The client runs at `http://localhost:5009`. The API runs separately at
+`http://localhost:7041/api/Weather`. The client's Weather page requests `/api/Weather`
+on its own origin, so it fails locally: no local proxy or CORS workaround is added.
+When deployed, App Service Builder routes `/api` to the API on the same origin.
 
 The vendored Bootstrap distribution under `Client/wwwroot/lib/` is version 5.3.8.
 
-The Azure deployment host must support the .NET 11 isolated worker runtime.
-Local validation does not establish .NET 11 support for managed Static Web Apps APIs.
+## OpenAPI document
 
-## Regression checks
+Every build of `Api` writes the API's OpenAPI document to `Api/openapi.json`. The file
+is committed so API contract changes show up in diffs; commit it whenever it changes.
 
-Node.js 22 or later is required for the test tooling.
+## Deployment
+
+`builder.yaml` is the App Service Builder manifest:
+
+| Component | Role   | Source    | Build                                              | Public path |
+|-----------|--------|-----------|----------------------------------------------------|-------------|
+| `client`  | static | `Client/` | `dotnet publish`, serves `wwwroot` from the output | `/`         |
+| `api`     | web    | `Api/`    | `dotnet publish`, runs `dotnet Api.dll` on 8080    | `/api`      |
+
+Deployment health is checked at `/api/health`, which must return exactly 200.
+
+## Checks
 
 ```sh
 npm ci
 npx playwright install chromium
-npm test
-npm run test:e2e
+dotnet test Api.Tests          # API endpoints, in-process
+npm test                       # project settings and builder.yaml contract
+npm run test:e2e               # Playwright: client, API and the local Weather failure
+tests/openapi-build.sh         # build writes Api/openapi.json with both endpoints
+tests/manifest-build.sh        # builds and starts the api with builder.yaml's own commands, probes the health path
+dotnet tool restore
+(cd Api.Tests && dotnet stryker --project Api.csproj)   # Stryker.NET mutation testing
 ```
 
 Playwright starts both projects automatically (or reuses existing local servers).
-It verifies the rendered home page, interactive counter, exact API response, and
-the expected Weather-page failure without Static Web Apps routing.
