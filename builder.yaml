@@ -1,0 +1,22 @@
+name: test-swa-net10
+components:
+  - name: client
+    role: static
+    platform: dotnet
+    platformVersion: "10.0"
+    rootDirectory: Client
+    build: dotnet publish Client.csproj -c Release -o $DESTINATION_DIR
+    output: wwwroot
+    path: /
+
+  - name: api
+    role: web
+    platform: dotnet
+    platformVersion: "10.0"
+    rootDirectory: Api
+    build: dotnet publish Api.csproj -c Release -o $DESTINATION_DIR
+    run:
+      port: 8080
+      start: dotnet Api.dll --urls http://0.0.0.0:8080
+      healthCheckPath: /api/health
+    path: /api

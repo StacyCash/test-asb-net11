@@ -1,13 +1,26 @@
-using Microsoft.Azure.Functions.Worker.Builder;
-using Microsoft.Extensions.Hosting;
+var builder = WebApplication.CreateBuilder(args);
 
-var builder = FunctionsApplication.CreateBuilder(args);
+builder.Services.AddOpenApi();
 
-builder.ConfigureFunctionsWebApplication();
+var app = builder.Build();
 
-// Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4.
-// builder.Services
-//     .AddApplicationInsightsTelemetryWorkerService()
-//     .ConfigureFunctionsApplicationInsights();
+WeatherForecast[] forecasts =
+[
+    new(new DateOnly(2022, 1, 6), 1, "Freezing"),
+    new(new DateOnly(2022, 1, 7), 14, "Bracing"),
+    new(new DateOnly(2022, 1, 8), -13, "Freezing"),
+    new(new DateOnly(2022, 1, 9), -16, "Balmy"),
+    new(new DateOnly(2022, 1, 10), -2, "Chilly"),
+];
 
-builder.Build().Run();
+app.MapGet("/api/Weather", () => forecasts)
+    .Produces<WeatherForecast[]>();
+
+app.MapGet("/api/health", () => Results.Ok())
+    .Produces(StatusCodes.Status200OK);
+
+app.Run();
+
+public record WeatherForecast(DateOnly Date, int TemperatureC, string Summary);
+
+public partial class Program;

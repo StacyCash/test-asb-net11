@@ -10,7 +10,7 @@ test('the standalone Blazor client renders and the counter is interactive', asyn
   await expect(page.locator('#blazor-error-ui')).toBeHidden();
 });
 
-test('the Functions API returns the expected weather data', async ({ request }) => {
+test('the minimal API returns the expected weather data', async ({ request }) => {
   const response = await request.get('http://127.0.0.1:7041/api/Weather');
   expect(response.status()).toBe(200);
   expect(await response.json()).toEqual([
