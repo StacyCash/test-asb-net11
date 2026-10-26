@@ -1,0 +1,12 @@
+{
+  "name": "test-swa-net11",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/project.test.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1"
+  }
+}
